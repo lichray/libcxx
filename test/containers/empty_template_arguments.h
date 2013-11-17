@@ -16,4 +16,9 @@ class incomplete_allocator
     // missing `value_type` typedef
 };
 
+template <class T>
+struct empty_functor
+{
+};
+
 #endif  // EMPTY_TEMPLATE_ARGUMENTS
