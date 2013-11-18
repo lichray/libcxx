@@ -20,6 +20,7 @@ struct X
 {
     std::queue<X> q1;
     std::queue<X, std::deque<X, empty_allocator<X>>> q2;
+    std::queue<X, empty_container<X>> q3;
 };
 
 int main()

@@ -11,16 +11,14 @@
 
 // stack
 
-// stack<Incomplete>
+// Container shall satisfies the Container completeness requirements
 
 #include <stack>
 #include "../../../empty_template_arguments.h"
 
 struct X
 {
-    std::stack<X> q1;
-    std::stack<X, std::deque<X, empty_allocator<X>>> q2;
-    std::stack<X, empty_container<X>> q3;
+    std::stack<X, incomplete_container<X>> q;
 };
 
 int main()

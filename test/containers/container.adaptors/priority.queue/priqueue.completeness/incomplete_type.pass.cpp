@@ -25,6 +25,7 @@ struct X
         std::vector<X, empty_allocator<X>>,
         empty_functor<X>
     > q2;
+    std::priority_queue<X, empty_container<X>> q3;
 };
 
 int main()
