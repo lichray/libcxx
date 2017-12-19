@@ -1,0 +1,205 @@
+// -*- C++ -*-
+//===------------------------------ charconv ------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_CHARCONV
+#define _LIBCPP_CHARCONV
+
+/*
+    charconv synopsis
+
+namespace std {
+
+  // floating-point format for primitive numerical conversion
+  enum class chars_format {
+    scientific = unspecified,
+    fixed = unspecified,
+    hex = unspecified,
+    general = fixed | scientific
+  };
+
+  // 23.20.2, primitive numerical output conversion
+  struct to_chars_result {
+    char* ptr;
+    errc ec;
+  };
+
+  to_chars_result to_chars(char* first, char* last, see below value,
+                           int base = 10);
+
+  to_chars_result to_chars(char* first, char* last, float value);
+  to_chars_result to_chars(char* first, char* last, double value);
+  to_chars_result to_chars(char* first, char* last, long double value);
+
+  to_chars_result to_chars(char* first, char* last, float value,
+                           chars_format fmt);
+  to_chars_result to_chars(char* first, char* last, double value,
+                           chars_format fmt);
+  to_chars_result to_chars(char* first, char* last, long double value,
+                           chars_format fmt);
+
+  to_chars_result to_chars(char* first, char* last, float value,
+                           chars_format fmt, int precision);
+  to_chars_result to_chars(char* first, char* last, double value,
+                           chars_format fmt, int precision);
+  to_chars_result to_chars(char* first, char* last, long double value,
+                           chars_format fmt, int precision);
+
+  // 23.20.3, primitive numerical input conversion
+  struct from_chars_result {
+    const char* ptr;
+    errc ec;
+  };
+
+  from_chars_result from_chars(const char* first, const char* last,
+                               see below& value, int base = 10);
+
+  from_chars_result from_chars(const char* first, const char* last,
+                               float& value,
+                               chars_format fmt = chars_format::general);
+  from_chars_result from_chars(const char* first, const char* last,
+                               double& value,
+                               chars_format fmt = chars_format::general);
+  from_chars_result from_chars(const char* first, const char* last,
+                               long double& value,
+                               chars_format fmt = chars_format::general);
+
+} // namespace std
+
+*/
+
+#include <__errc>
+#include <type_traits>
+
+#include <__debug>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+enum class _LIBCPP_ENUM_VIS chars_format
+{
+    scientific = 0x1,
+    fixed = 0x2,
+    hex = 0x4,
+    general = fixed | scientific
+};
+
+struct _LIBCPP_TYPE_VIS to_chars_result
+{
+    char* ptr;
+    errc ec;
+};
+
+struct _LIBCPP_TYPE_VIS from_chars_result
+{
+    const char* ptr;
+    errc ec;
+};
+
+void to_chars(char*, char*, bool, int = 10) = delete;
+void from_chars(const char*, const char*, bool, int = 10) = delete;
+
+template <typename _Tp>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__complement(_Tp __x) -> _Tp
+{
+    static_assert(is_unsigned<_Tp>::value, "cast to unsigned first");
+    return _Tp(~__x + 1);
+}
+
+template <typename _Tp>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__to_unsigned(_Tp __x) -> typename make_unsigned<_Tp>::type
+{
+    return static_cast<typename make_unsigned<_Tp>::type>(__x);
+}
+
+template <typename _Tp>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
+                    true_type) -> to_chars_result
+{
+    auto __x = __to_unsigned(__value);
+    if (__value < 0 && __first != __last)
+    {
+        *__first++ = '-';
+        __x = __complement(__x);
+    }
+
+    return __to_chars_integral(__first, __last, __x, __base, false_type());
+}
+
+template <typename _Tp>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
+                    false_type) -> to_chars_result
+{
+    // XXX assuming ASCII-compatible basic character sets
+    auto __gen_digit = [](_Tp __c) {
+        return char(__c + (__c < 10 ? '0' : 'a' - 10));
+    };
+
+    auto __reverse_buffer = [](char* __first, char* __last) {
+        for (; __first < --__last; ++__first)
+            _VSTD::iter_swap(__first, __last);
+    };
+
+    auto __p = __first;
+    while (__p != __last)
+    {
+        auto __c = __value % __base;
+        __value /= __base;
+        *__p++ = __gen_digit(__c);
+        if (__value == 0)
+            break;
+    }
+
+    if (__value != 0 || __p == __first)
+        return {__p, errc::value_too_large};
+    else
+    {
+        __reverse_buffer(__first, __p);
+        return {__p, {}};
+    }
+}
+
+template <typename _Tp,
+          typename enable_if<is_integral<_Tp>::value, int>::type = 0>
+inline _LIBCPP_INLINE_VISIBILITY auto
+to_chars(char* __first, char* __last, _Tp __value) -> to_chars_result;
+
+template <typename _Tp,
+          typename enable_if<is_integral<_Tp>::value, int>::type = 0>
+inline _LIBCPP_INLINE_VISIBILITY auto
+to_chars(char* __first, char* __last, _Tp __value, int __base)
+    -> to_chars_result
+{
+    _LIBCPP_ASSERT(2 <= __base && __base <= 36, "base not in [2, 36]");
+    return __to_chars_integral(__first, __last, __value, __base,
+                               is_signed<_Tp>());
+}
+
+template <typename _Tp,
+          typename enable_if<is_integral<_Tp>::value, int>::type = 0>
+inline _LIBCPP_INLINE_VISIBILITY auto
+from_chars(const char* __first, const char* __last, _Tp& __value)
+    -> from_chars_result;
+
+template <typename _Tp,
+          typename enable_if<is_integral<_Tp>::value, int>::type = 0>
+inline _LIBCPP_INLINE_VISIBILITY auto
+from_chars(const char* __first, const char* __last, _Tp& __value, int __base)
+    -> from_chars_result;
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif  // _LIBCPP_CHARCONV
