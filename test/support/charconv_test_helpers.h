@@ -108,6 +108,11 @@ struct to_chars_test_base
 
         auto a = fromchars(buf, r.ptr, args...);
         LIBCPP_ASSERT(v == a);
+
+        auto ep = r.ptr - 1;
+        r = to_chars(buf, ep, v, args...);
+        LIBCPP_ASSERT(r.ptr == ep);
+        LIBCPP_ASSERT(r.ec == std::errc::value_too_large);
     }
 
 private:

@@ -23,6 +23,10 @@ struct test_basics : to_chars_test_base<T>
 
     void operator()()
     {
+
+        test(0, "0");
+        test(42, "42");
+        test(32768, "32768");
         test(0, "0", 10);
         test(42, "42", 10);
         test(32768, "32768", 10);
@@ -50,6 +54,8 @@ struct test_signed : to_chars_test_base<T>
 
     void operator()()
     {
+        test(-1, "-1");
+        test(-12, "-12");
         test(-1, "-1", 10);
         test(-12, "-12", 10);
         test(-21734634, "-21734634", 10);
