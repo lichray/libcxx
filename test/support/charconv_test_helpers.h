@@ -147,6 +147,53 @@ private:
     char buf[100];
 };
 
+template <typename X>
+struct roundtrip_test_base
+{
+    template <typename T, typename... Ts>
+    void test(T v, Ts... args)
+    {
+        using std::from_chars;
+        using std::to_chars;
+        std::from_chars_result r2;
+        std::to_chars_result r;
+        X x = 0xc;
+
+        if (fits_in<X>(v))
+        {
+            r = to_chars(buf, buf + sizeof(buf), v, args...);
+            LIBCPP_ASSERT(r.ec == std::errc{});
+
+            r2 = from_chars(buf, r.ptr, x, args...);
+            LIBCPP_ASSERT(r2.ptr == r.ptr);
+            LIBCPP_ASSERT(x == X(v));
+        }
+        else
+        {
+            r = to_chars(buf, buf + sizeof(buf), v, args...);
+            LIBCPP_ASSERT(r.ec == std::errc{});
+
+            r2 = from_chars(buf, r.ptr, x, args...);
+
+            if (std::is_signed<T>::value && v < 0 && std::is_unsigned<X>::value)
+            {
+                LIBCPP_ASSERT(x == 0xc);
+                LIBCPP_ASSERT(r2.ptr == buf);
+                LIBCPP_ASSERT(r.ec == std::errc::invalid_argument);
+            }
+            else
+            {
+                LIBCPP_ASSERT(x == 0xc);
+                LIBCPP_ASSERT(r2.ptr == r.ptr);
+                LIBCPP_ASSERT(r2.ec == std::errc::result_out_of_range);
+            }
+        }
+    }
+
+private:
+    char buf[100];
+};
+
 template <typename... T>
 struct type_list
 {
@@ -169,6 +216,11 @@ constexpr auto concat(L1, L2) -> concat_t<L1, L2>
 {
     return {};
 }
+
+auto all_signed = type_list<char, signed char, short, int, long, long long>();
+auto all_unsigned = type_list<unsigned char, unsigned short, unsigned int,
+                              unsigned long, unsigned long long>();
+auto integrals = concat(all_signed, all_unsigned);
 
 template <template <typename> class Fn, typename... Ts>
 void

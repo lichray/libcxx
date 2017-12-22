@@ -23,7 +23,6 @@ struct test_basics : to_chars_test_base<T>
 
     void operator()()
     {
-
         test(0, "0");
         test(42, "42");
         test(32768, "32768");
@@ -76,12 +75,6 @@ struct test_signed : to_chars_test_base<T>
 int
 main()
 {
-    auto all_signed =
-        type_list<char, signed char, short, int, long, long long>();
-    auto all_unsigned = type_list<unsigned char, unsigned short, unsigned int,
-                                  unsigned long, unsigned long long>();
-    auto integrals = concat(all_signed, all_unsigned);
-
     run<test_basics>(integrals);
     run<test_signed>(all_signed);
 }

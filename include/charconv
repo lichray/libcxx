@@ -77,6 +77,7 @@ namespace std {
 #include <__errc>
 #include <support/itoa/itoa.h>
 #include <string.h>
+#include <math.h>
 
 #include <__debug>
 
@@ -242,17 +243,229 @@ to_chars(char* __first, char* __last, _Tp __value, int __base)
                                is_signed<_Tp>());
 }
 
+template <typename _It, typename _Tp, typename _Fn, typename... _Ts>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__sign_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... __args)
+    -> from_chars_result
+{
+    using __tl = numeric_limits<_Tp>;
+    decltype(__to_unsigned(__value)) __x;
+
+    bool __neg = (__first != __last && *__first == '-');
+    auto __r = __f(__neg ? __first + 1 : __first, __last, __x, __args...);
+    switch (__r.ec)
+    {
+    case errc::invalid_argument:
+        return {__first, __r.ec};
+    case errc::result_out_of_range:
+        return __r;
+    default:
+        break;
+    }
+
+    if (__neg)
+    {
+        if (__x <= __complement(__to_unsigned(__tl::min())))
+        {
+            __x = __complement(__x);
+            memcpy(&__value, &__x, sizeof(__x));
+            return __r;
+        }
+    }
+    else
+    {
+        if (__x <= (__tl::max)())
+        {
+            __value = __x;
+            return __r;
+        }
+    }
+
+    return {__r.ptr, errc::result_out_of_range};
+}
+
+template <typename _Tp>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__in_pattern(_Tp __c) -> bool
+{
+    return '0' <= __c && __c <= '9';
+}
+
+struct _LIBCPP_HIDDEN __in_pattern_result
+{
+    bool __ok;
+    int __val;
+
+    explicit _LIBCPP_INLINE_VISIBILITY operator bool() const { return __ok; }
+};
+
+template <typename _Tp>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__in_pattern(_Tp __c, int __base) -> __in_pattern_result
+{
+    if (__base <= 10)
+        return {'0' <= __c && __c < '0' + __base, __c - '0'};
+    else if (__in_pattern(__c))
+        return {true, __c - '0'};
+    else if ('a' <= __c && __c < 'a' + __base - 10)
+        return {true, __c - 'a' + 10};
+    else
+        return {'A' <= __c && __c < 'A' + __base - 10, __c - 'A' + 10};
+}
+
+template <typename _It, typename _Tp, typename _Fn, typename... _Ts>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__subject_seq_combinator(_It __first, _It __last, _Tp& __value, _Fn __f,
+                         _Ts... __args) -> from_chars_result
+{
+    auto __find_non_zero = [](_It __first, _It __last) -> _It {
+        for (; __first != __last; ++__first)
+            if (*__first != '0')
+                break;
+        return __first;
+    };
+
+    auto __p = __find_non_zero(__first, __last);
+    if (__p == __last || !__in_pattern(*__p, __args...))
+    {
+        if (__p == __first)
+            return {__first, errc::invalid_argument};
+        else
+        {
+            __value = 0;
+            return {__p, {}};
+        }
+    }
+
+    auto __r = __f(__p, __last, __value, __args...);
+    // ...you just can't let them approve anything that wasn't implemented
+    if (__r.ec == errc::result_out_of_range)
+    {
+        for (; __r.ptr != __last; ++__r.ptr)
+        {
+            if (!__in_pattern(*__r.ptr, __args...))
+                break;
+        }
+    }
+
+    return __r;
+}
+
+template <typename _Tp,
+          typename enable_if<is_unsigned<_Tp>::value, int>::type = 0>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
+    -> from_chars_result
+{
+    using __tx = __itoa::traits<_Tp>;
+    using __output_type = typename __tx::type;
+
+    return __subject_seq_combinator(
+        __first, __last, __value,
+        [](const char* __first, const char* __last,
+           _Tp& __value) -> from_chars_result {
+            __output_type __a, __b;
+            auto __p = __tx::read(__first, __last, __a, __b);
+            if (__p == __last || !__in_pattern(*__p))
+            {
+                __output_type __m = (numeric_limits<_Tp>::max)();
+                if (__m >= __a && __m - __a >= __b)
+                {
+                    __value = __a + __b;
+                    return {__p, {}};
+                }
+            }
+            return {__p, errc::result_out_of_range};
+        });
+}
+
+template <typename _Tp,
+          typename enable_if<is_signed<_Tp>::value, int>::type = 0>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
+    -> from_chars_result
+{
+    using __t = decltype(__to_unsigned(__value));
+    return __sign_combinator(__first, __last, __value, __from_chars_atoi<__t>);
+}
+
+template <typename _Tp,
+          typename enable_if<is_unsigned<_Tp>::value, int>::type = 0>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__from_chars_integral(const char* __first, const char* __last, _Tp& __value,
+                      int __base) -> from_chars_result
+{
+    if (__base == 10)
+        return __from_chars_atoi(__first, __last, __value);
+
+    return __subject_seq_combinator(
+        __first, __last, __value,
+        [](const char* __p, const char* __last, _Tp& __value,
+           int __base) -> from_chars_result {
+            using __tl = numeric_limits<_Tp>;
+            auto __digits = __tl::digits / log2f(float(__base));
+            _Tp __a = __in_pattern(*__p++, __base).__val, __b = 0;
+
+            for (int __i = 1; __p != __last; ++__i, ++__p)
+            {
+                if (auto __c = __in_pattern(*__p, __base))
+                {
+                    if (__i < __digits - 1)
+                        __a = __a * __base + __c.__val;
+                    else
+                    {
+                        if (!__itoa::__mul_overflowed(__a, __base, __a))
+                            ++__p;
+                        __b = __c.__val;
+                        break;
+                    }
+                }
+                else
+                    break;
+            }
+
+            if (__p == __last || !__in_pattern(*__p, __base))
+            {
+                if ((__tl::max)() - __a >= __b)
+                {
+                    __value = __a + __b;
+                    return {__p, {}};
+                }
+            }
+            return {__p, errc::result_out_of_range};
+        },
+        __base);
+}
+
+template <typename _Tp,
+          typename enable_if<is_signed<_Tp>::value, int>::type = 0>
+inline _LIBCPP_INLINE_VISIBILITY auto
+__from_chars_integral(const char* __first, const char* __last, _Tp& __value,
+                      int __base) -> from_chars_result
+{
+    using __t = decltype(__to_unsigned(__value));
+    return __sign_combinator(__first, __last, __value,
+                             __from_chars_integral<__t>, __base);
+}
+
 template <typename _Tp,
           typename enable_if<is_integral<_Tp>::value, int>::type = 0>
 inline _LIBCPP_INLINE_VISIBILITY auto
 from_chars(const char* __first, const char* __last, _Tp& __value)
-    -> from_chars_result;
+    -> from_chars_result
+{
+    return __from_chars_atoi(__first, __last, __value);
+}
 
 template <typename _Tp,
           typename enable_if<is_integral<_Tp>::value, int>::type = 0>
 inline _LIBCPP_INLINE_VISIBILITY auto
 from_chars(const char* __first, const char* __last, _Tp& __value, int __base)
-    -> from_chars_result;
+    -> from_chars_result
+{
+    _LIBCPP_ASSERT(2 <= __base && __base <= 36, "base not in [2, 36]");
+    return __from_chars_integral(__first, __last, __value, __base);
+}
 
 _LIBCPP_END_NAMESPACE_STD
 
