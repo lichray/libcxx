@@ -195,32 +195,27 @@ __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
     if (__base == 10)
         return __to_chars_itoa(__first, __last, __value, false_type());
 
-    // XXX assuming ASCII-compatible basic character sets
     auto __gen_digit = [](_Tp __c) {
-        return char(__c + (__c < 10 ? '0' : 'a' - 10));
+        return "0123456789abcdefghijklmnopqrstuvwxyz"[__c];
     };
 
-    auto __reverse_buffer = [](char* __first, char* __last) {
-        for (; __first < --__last; ++__first)
-            _VSTD::iter_swap(__first, __last);
-    };
-
-    auto __p = __first;
-    while (__p != __last)
+    auto __p = __last;
+    while (__p != __first)
     {
         auto __c = __value % __base;
         __value /= __base;
-        *__p++ = __gen_digit(__c);
+        *--__p = __gen_digit(__c);
         if (__value == 0)
             break;
     }
 
-    if (__value != 0 || __p == __first)
-        return {__p, errc::value_too_large};
+    auto __len = __last - __p;
+    if (__value != 0 || !__len)
+        return {__last, errc::value_too_large};
     else
     {
-        __reverse_buffer(__first, __p);
-        return {__p, {}};
+        memmove(__first, __p, __len);
+        return {__first + __len, {}};
     }
 }
 
