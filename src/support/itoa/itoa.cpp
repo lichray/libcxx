@@ -1,18 +1,15 @@
-// Tencent is pleased to support the open source community by making RapidJSON available.
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
 //
-// Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip. All rights reserved.
+//                     The LLVM Compiler Infrastructure
 //
-// Licensed under the MIT License (the "License"); you may not use this file except
-// in compliance with the License. You may obtain a copy of the License at
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
 //
-// http://opensource.org/licenses/MIT
-//
-// Unless required by applicable law or agreed to in writing, software distributed
-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-// CONDITIONS OF ANY KIND, either express or implied. See the License for the
-// specific language governing permissions and limitations under the License.
+//===----------------------------------------------------------------------===//
 
 #include <support/itoa/itoa.h>
+#include <string.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -35,22 +32,52 @@ static const char cDigitsLut[200] = {
     '9', '0', '9', '1', '9', '2', '9', '3', '9', '4', '9', '5', '9', '6', '9',
     '7', '9', '8', '9', '9'};
 
+#define APPEND1(i)                              \
+    do                                          \
+    {                                           \
+        *buffer++ = '0' + static_cast<char>(i); \
+    } while (0)
+
+#define APPEND2(i)                             \
+    do                                         \
+    {                                          \
+        memcpy(buffer, &cDigitsLut[(i)*2], 2); \
+        buffer += 2;                           \
+    } while (0)
+
+#define APPEND3(i)          \
+    do                      \
+    {                       \
+        APPEND1((i) / 100); \
+        APPEND2((i) % 100); \
+    } while (0)
+
+#define APPEND4(i)          \
+    do                      \
+    {                       \
+        APPEND2((i) / 100); \
+        APPEND2((i) % 100); \
+    } while (0)
+
 char*
 __u32toa(uint32_t value, char* buffer)
 {
-
     if (value < 10000)
     {
-        const uint32_t d1 = (value / 100) << 1;
-        const uint32_t d2 = (value % 100) << 1;
-
-        if (value >= 1000)
-            *buffer++ = cDigitsLut[d1];
-        if (value >= 100)
-            *buffer++ = cDigitsLut[d1 + 1];
-        if (value >= 10)
-            *buffer++ = cDigitsLut[d2];
-        *buffer++ = cDigitsLut[d2 + 1];
+        if (value < 100)
+        {
+            if (value < 10)
+                APPEND1(value);
+            else
+                APPEND2(value);
+        }
+        else
+        {
+            if (value < 1000)
+                APPEND3(value);
+            else
+                APPEND4(value);
+        }
     }
     else if (value < 100000000)
     {
@@ -58,90 +85,63 @@ __u32toa(uint32_t value, char* buffer)
         const uint32_t b = value / 10000;
         const uint32_t c = value % 10000;
 
-        const uint32_t d1 = (b / 100) << 1;
-        const uint32_t d2 = (b % 100) << 1;
+        if (value < 1000000)
+        {
+            if (value < 100000)
+                APPEND1(b);
+            else
+                APPEND2(b);
+        }
+        else
+        {
+            if (value < 10000000)
+                APPEND3(b);
+            else
+                APPEND4(b);
+        }
 
-        const uint32_t d3 = (c / 100) << 1;
-        const uint32_t d4 = (c % 100) << 1;
-
-        if (value >= 10000000)
-            *buffer++ = cDigitsLut[d1];
-        if (value >= 1000000)
-            *buffer++ = cDigitsLut[d1 + 1];
-        if (value >= 100000)
-            *buffer++ = cDigitsLut[d2];
-        *buffer++ = cDigitsLut[d2 + 1];
-
-        *buffer++ = cDigitsLut[d3];
-        *buffer++ = cDigitsLut[d3 + 1];
-        *buffer++ = cDigitsLut[d4];
-        *buffer++ = cDigitsLut[d4 + 1];
+        APPEND4(c);
     }
     else
     {
         // value = aabbbbcccc in decimal
-
         const uint32_t a = value / 100000000;  // 1 to 42
         value %= 100000000;
 
-        if (a >= 10)
-        {
-            const unsigned i = a << 1;
-            *buffer++ = cDigitsLut[i];
-            *buffer++ = cDigitsLut[i + 1];
-        }
+        if (a < 10)
+            APPEND1(a);
         else
-            *buffer++ = static_cast<char>('0' + static_cast<char>(a));
+            APPEND2(a);
 
-        const uint32_t b = value / 10000;  // 0 to 9999
-        const uint32_t c = value % 10000;  // 0 to 9999
-
-        const uint32_t d1 = (b / 100) << 1;
-        const uint32_t d2 = (b % 100) << 1;
-
-        const uint32_t d3 = (c / 100) << 1;
-        const uint32_t d4 = (c % 100) << 1;
-
-        *buffer++ = cDigitsLut[d1];
-        *buffer++ = cDigitsLut[d1 + 1];
-        *buffer++ = cDigitsLut[d2];
-        *buffer++ = cDigitsLut[d2 + 1];
-        *buffer++ = cDigitsLut[d3];
-        *buffer++ = cDigitsLut[d3 + 1];
-        *buffer++ = cDigitsLut[d4];
-        *buffer++ = cDigitsLut[d4 + 1];
+        APPEND4(value / 10000);
+        APPEND4(value % 10000);
     }
+
     return buffer;
 }
 
 char*
 __u64toa(uint64_t value, char* buffer)
 {
-    const uint64_t kTen8 = 100000000;
-    const uint64_t kTen9 = kTen8 * 10;
-    const uint64_t kTen10 = kTen8 * 100;
-    const uint64_t kTen11 = kTen8 * 1000;
-    const uint64_t kTen12 = kTen8 * 10000;
-    const uint64_t kTen13 = kTen8 * 100000;
-    const uint64_t kTen14 = kTen8 * 1000000;
-    const uint64_t kTen15 = kTen8 * 10000000;
-    const uint64_t kTen16 = kTen8 * kTen8;
-
-    if (value < kTen8)
+    if (value < 100000000)
     {
         uint32_t v = static_cast<uint32_t>(value);
         if (v < 10000)
         {
-            const uint32_t d1 = (v / 100) << 1;
-            const uint32_t d2 = (v % 100) << 1;
-
-            if (v >= 1000)
-                *buffer++ = cDigitsLut[d1];
-            if (v >= 100)
-                *buffer++ = cDigitsLut[d1 + 1];
-            if (v >= 10)
-                *buffer++ = cDigitsLut[d2];
-            *buffer++ = cDigitsLut[d2 + 1];
+            if (v < 100)
+            {
+                if (v < 10)
+                    APPEND1(v);
+                else
+                    APPEND2(v);
+            }
+            else
+            {
+                if (v < 1000)
+                    APPEND3(v);
+                else
+                    APPEND4(v);
+            }
         }
         else
         {
@@ -149,143 +149,78 @@ __u64toa(uint64_t value, char* buffer)
             const uint32_t b = v / 10000;
             const uint32_t c = v % 10000;
 
-            const uint32_t d1 = (b / 100) << 1;
-            const uint32_t d2 = (b % 100) << 1;
+            if (v < 1000000)
+            {
+                if (v < 100000)
+                    APPEND1(b);
+                else
+                    APPEND2(b);
+            }
+            else
+            {
+                if (v < 10000000)
+                    APPEND3(b);
+                else
+                    APPEND4(b);
+            }
 
-            const uint32_t d3 = (c / 100) << 1;
-            const uint32_t d4 = (c % 100) << 1;
-
-            if (value >= 10000000)
-                *buffer++ = cDigitsLut[d1];
-            if (value >= 1000000)
-                *buffer++ = cDigitsLut[d1 + 1];
-            if (value >= 100000)
-                *buffer++ = cDigitsLut[d2];
-            *buffer++ = cDigitsLut[d2 + 1];
-
-            *buffer++ = cDigitsLut[d3];
-            *buffer++ = cDigitsLut[d3 + 1];
-            *buffer++ = cDigitsLut[d4];
-            *buffer++ = cDigitsLut[d4 + 1];
+            APPEND4(c);
         }
     }
-    else if (value < kTen16)
+    else if (value < 10000000000000000)
     {
-        const uint32_t v0 = static_cast<uint32_t>(value / kTen8);
-        const uint32_t v1 = static_cast<uint32_t>(value % kTen8);
+        const uint32_t v0 = static_cast<uint32_t>(value / 100000000);
+        const uint32_t v1 = static_cast<uint32_t>(value % 100000000);
 
         const uint32_t b0 = v0 / 10000;
         const uint32_t c0 = v0 % 10000;
 
-        const uint32_t d1 = (b0 / 100) << 1;
-        const uint32_t d2 = (b0 % 100) << 1;
-
-        const uint32_t d3 = (c0 / 100) << 1;
-        const uint32_t d4 = (c0 % 100) << 1;
-
-        const uint32_t b1 = v1 / 10000;
-        const uint32_t c1 = v1 % 10000;
-
-        const uint32_t d5 = (b1 / 100) << 1;
-        const uint32_t d6 = (b1 % 100) << 1;
-
-        const uint32_t d7 = (c1 / 100) << 1;
-        const uint32_t d8 = (c1 % 100) << 1;
-
-        if (value >= kTen15)
-            *buffer++ = cDigitsLut[d1];
-        if (value >= kTen14)
-            *buffer++ = cDigitsLut[d1 + 1];
-        if (value >= kTen13)
-            *buffer++ = cDigitsLut[d2];
-        if (value >= kTen12)
-            *buffer++ = cDigitsLut[d2 + 1];
-        if (value >= kTen11)
-            *buffer++ = cDigitsLut[d3];
-        if (value >= kTen10)
-            *buffer++ = cDigitsLut[d3 + 1];
-        if (value >= kTen9)
-            *buffer++ = cDigitsLut[d4];
-        if (value >= kTen8)
-            *buffer++ = cDigitsLut[d4 + 1];
-
-        *buffer++ = cDigitsLut[d5];
-        *buffer++ = cDigitsLut[d5 + 1];
-        *buffer++ = cDigitsLut[d6];
-        *buffer++ = cDigitsLut[d6 + 1];
-        *buffer++ = cDigitsLut[d7];
-        *buffer++ = cDigitsLut[d7 + 1];
-        *buffer++ = cDigitsLut[d8];
-        *buffer++ = cDigitsLut[d8 + 1];
-    }
-    else
-    {
-        const uint32_t a = static_cast<uint32_t>(value / kTen16);  // 1 to 1844
-        value %= kTen16;
-
-        if (a < 10)
-            *buffer++ = static_cast<char>('0' + static_cast<char>(a));
-        else if (a < 100)
+        if (v0 < 1000000)
         {
-            const uint32_t i = a << 1;
-            *buffer++ = cDigitsLut[i];
-            *buffer++ = cDigitsLut[i + 1];
-        }
-        else if (a < 1000)
-        {
-            *buffer++ = static_cast<char>('0' + static_cast<char>(a / 100));
-
-            const uint32_t i = (a % 100) << 1;
-            *buffer++ = cDigitsLut[i];
-            *buffer++ = cDigitsLut[i + 1];
+            if (v0 < 100000)
+                APPEND1(b0);
+            else
+                APPEND2(b0);
         }
         else
         {
-            const uint32_t i = (a / 100) << 1;
-            const uint32_t j = (a % 100) << 1;
-            *buffer++ = cDigitsLut[i];
-            *buffer++ = cDigitsLut[i + 1];
-            *buffer++ = cDigitsLut[j];
-            *buffer++ = cDigitsLut[j + 1];
+            if (v0 < 10000000)
+                APPEND3(b0);
+            else
+                APPEND4(b0);
         }
 
-        const uint32_t v0 = static_cast<uint32_t>(value / kTen8);
-        const uint32_t v1 = static_cast<uint32_t>(value % kTen8);
+        APPEND4(c0);
+        APPEND4(v1 / 10000);
+        APPEND4(v1 % 10000);
+    }
+    else
+    {
+        const uint32_t a =
+            static_cast<uint32_t>(value / 10000000000000000);  // 1 to 1844
+        value %= 10000000000000000;
 
-        const uint32_t b0 = v0 / 10000;
-        const uint32_t c0 = v0 % 10000;
+        if (a < 100)
+        {
+            if (a < 10)
+                APPEND1(a);
+            else
+                APPEND2(a);
+        }
+        else
+        {
+            if (a < 1000)
+                APPEND3(a);
+            else
+                APPEND4(a);
+        }
 
-        const uint32_t d1 = (b0 / 100) << 1;
-        const uint32_t d2 = (b0 % 100) << 1;
-
-        const uint32_t d3 = (c0 / 100) << 1;
-        const uint32_t d4 = (c0 % 100) << 1;
-
-        const uint32_t b1 = v1 / 10000;
-        const uint32_t c1 = v1 % 10000;
-
-        const uint32_t d5 = (b1 / 100) << 1;
-        const uint32_t d6 = (b1 % 100) << 1;
-
-        const uint32_t d7 = (c1 / 100) << 1;
-        const uint32_t d8 = (c1 % 100) << 1;
-
-        *buffer++ = cDigitsLut[d1];
-        *buffer++ = cDigitsLut[d1 + 1];
-        *buffer++ = cDigitsLut[d2];
-        *buffer++ = cDigitsLut[d2 + 1];
-        *buffer++ = cDigitsLut[d3];
-        *buffer++ = cDigitsLut[d3 + 1];
-        *buffer++ = cDigitsLut[d4];
-        *buffer++ = cDigitsLut[d4 + 1];
-        *buffer++ = cDigitsLut[d5];
-        *buffer++ = cDigitsLut[d5 + 1];
-        *buffer++ = cDigitsLut[d6];
-        *buffer++ = cDigitsLut[d6 + 1];
-        *buffer++ = cDigitsLut[d7];
-        *buffer++ = cDigitsLut[d7 + 1];
-        *buffer++ = cDigitsLut[d8];
-        *buffer++ = cDigitsLut[d8 + 1];
+        const uint32_t v0 = static_cast<uint32_t>(value / 100000000);
+        const uint32_t v1 = static_cast<uint32_t>(value % 100000000);
+        APPEND4(v0 / 10000);
+        APPEND4(v0 % 10000);
+        APPEND4(v1 / 10000);
+        APPEND4(v1 % 10000);
     }
 
     return buffer;
