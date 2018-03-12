@@ -87,13 +87,13 @@ struct to_chars_test_base
             return;
 
         r = to_chars(buf, buf + len - 1, X(v), args...);
-        LIBCPP_ASSERT(r.ptr == buf + len - 1);
-        LIBCPP_ASSERT(r.ec == std::errc::value_too_large);
+        assert(r.ptr == buf + len - 1);
+        assert(r.ec == std::errc::value_too_large);
 
         r = to_chars(buf, buf + sizeof(buf), X(v), args...);
-        LIBCPP_ASSERT(r.ptr == buf + len);
-        LIBCPP_ASSERT(r.ec == std::errc{});
-        LIBCPP_ASSERT(memcmp(buf, expect, len) == 0);
+        assert(r.ptr == buf + len);
+        assert(r.ec == std::errc{});
+        assert(memcmp(buf, expect, len) == 0);
     }
 
     template <typename... Ts>
@@ -103,16 +103,16 @@ struct to_chars_test_base
         std::to_chars_result r;
 
         r = to_chars(buf, buf + sizeof(buf), v, args...);
-        LIBCPP_ASSERT(r.ec == std::errc{});
+        assert(r.ec == std::errc{});
         *r.ptr = '\0';
 
         auto a = fromchars(buf, r.ptr, args...);
-        LIBCPP_ASSERT(v == a);
+        assert(v == a);
 
         auto ep = r.ptr - 1;
         r = to_chars(buf, ep, v, args...);
-        LIBCPP_ASSERT(r.ptr == ep);
-        LIBCPP_ASSERT(r.ec == std::errc::value_too_large);
+        assert(r.ptr == ep);
+        assert(r.ec == std::errc::value_too_large);
     }
 
 private:
@@ -124,7 +124,7 @@ private:
     {
         char* last;
         auto r = strtoll(p, &last, base);
-        LIBCPP_ASSERT(last == ep);
+        assert(last == ep);
 
         return r;
     }
@@ -134,7 +134,7 @@ private:
     {
         char* last;
         auto r = strtoull(p, &last, base);
-        LIBCPP_ASSERT(last == ep);
+        assert(last == ep);
 
         return r;
     }
@@ -162,30 +162,30 @@ struct roundtrip_test_base
         if (fits_in<X>(v))
         {
             r = to_chars(buf, buf + sizeof(buf), v, args...);
-            LIBCPP_ASSERT(r.ec == std::errc{});
+            assert(r.ec == std::errc{});
 
             r2 = from_chars(buf, r.ptr, x, args...);
-            LIBCPP_ASSERT(r2.ptr == r.ptr);
-            LIBCPP_ASSERT(x == X(v));
+            assert(r2.ptr == r.ptr);
+            assert(x == X(v));
         }
         else
         {
             r = to_chars(buf, buf + sizeof(buf), v, args...);
-            LIBCPP_ASSERT(r.ec == std::errc{});
+            assert(r.ec == std::errc{});
 
             r2 = from_chars(buf, r.ptr, x, args...);
 
             if (std::is_signed<T>::value && v < 0 && std::is_unsigned<X>::value)
             {
-                LIBCPP_ASSERT(x == 0xc);
-                LIBCPP_ASSERT(r2.ptr == buf);
-                LIBCPP_ASSERT(r.ec == std::errc::invalid_argument);
+                assert(x == 0xc);
+                assert(r2.ptr == buf);
+                assert(r.ec == std::errc::invalid_argument);
             }
             else
             {
-                LIBCPP_ASSERT(x == 0xc);
-                LIBCPP_ASSERT(r2.ptr == r.ptr);
-                LIBCPP_ASSERT(r2.ec == std::errc::result_out_of_range);
+                assert(x == 0xc);
+                assert(r2.ptr == r.ptr);
+                assert(r2.ec == std::errc::result_out_of_range);
             }
         }
     }

@@ -51,36 +51,19 @@ static constexpr uint32_t __pow10_32[] = {
     UINT32_C(1000000000),
 };
 
-#if __has_builtin(__builtin_clzll)
-
-inline _LIBCPP_INLINE_VISIBILITY auto
-__u64digits10(uint64_t __x) -> int
-{
-    auto __t = (64 - __builtin_clzll(__x | 1)) * 1233 >> 12;
-    return __t - (__x < __pow10_64[__t]) + 1;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY auto
-__u32digits10(uint32_t __x) -> int
-{
-    auto __t = (32 - __builtin_clz(__x | 1)) * 1233 >> 12;
-    return __t - (__x < __pow10_32[__t]) + 1;
-}
-
-#endif
-
-extern _LIBCPP_FUNC_VIS char* __u64toa(uint64_t __value, char* __buffer);
-extern _LIBCPP_FUNC_VIS char* __u32toa(uint32_t __value, char* __buffer);
+_LIBCPP_FUNC_VIS char* __u64toa(uint64_t __value, char* __buffer);
+_LIBCPP_FUNC_VIS char* __u32toa(uint32_t __value, char* __buffer);
 
 template <typename _Tp, typename = void>
-struct _LIBCPP_HIDDEN __traits
+struct _LIBCPP_HIDDEN __traits_base
 {
     using type = uint64_t;
 
-#if __has_builtin(__builtin_clzll)
+#if !defined(_LIBCPP_COMPILER_MSVC)
     static _LIBCPP_INLINE_VISIBILITY auto width(_Tp __v) -> int
     {
-        return __u64digits10(__v);
+        auto __t = (64 - __builtin_clzll(__v | 1)) * 1233 >> 12;
+        return __t - (__v < __pow10_64[__t]) + 1;
     }
 #endif
 
@@ -96,14 +79,16 @@ struct _LIBCPP_HIDDEN __traits
 };
 
 template <typename _Tp>
-struct _LIBCPP_HIDDEN __traits<_Tp, decltype(void(uint32_t{declval<_Tp>()}))>
+struct _LIBCPP_HIDDEN
+    __traits_base<_Tp, decltype(void(uint32_t{declval<_Tp>()}))>
 {
     using type = uint32_t;
 
-#if __has_builtin(__builtin_clzll)
+#if !defined(_LIBCPP_COMPILER_MSVC)
     static _LIBCPP_INLINE_VISIBILITY auto width(_Tp __v) -> int
     {
-        return __u32digits10(__v);
+        auto __t = (32 - __builtin_clz(__v | 1)) * 1233 >> 12;
+        return __t - (__v < __pow10_32[__t]) + 1;
     }
 #endif
 
@@ -141,7 +126,7 @@ inline _LIBCPP_INLINE_VISIBILITY bool
 __mul_overflowed(_Tp __a, _Tp __b, _Tp& __r)
 {
     static_assert(is_unsigned<_Tp>::value, "");
-#if __has_builtin(__builtin_mul_overflow)
+#if !defined(_LIBCPP_COMPILER_MSVC)
     return __builtin_mul_overflow(__a, __b, &__r);
 #else
     bool __did = __b && ((numeric_limits<_Tp>::max)() / __b) < __a;
@@ -158,11 +143,11 @@ __mul_overflowed(_Tp __a, _Up __b, _Tp& __r)
 }
 
 template <typename _Tp>
-struct _LIBCPP_HIDDEN traits : __traits<_Tp>
+struct _LIBCPP_HIDDEN traits : __traits_base<_Tp>
 {
     static constexpr int digits = numeric_limits<_Tp>::digits10 + 1;
-    using __traits<_Tp>::pow;
-    using typename __traits<_Tp>::type;
+    using __traits_base<_Tp>::pow;
+    using typename __traits_base<_Tp>::type;
 
     // precondition: at least one non-zero character available
     static _LIBCPP_INLINE_VISIBILITY auto

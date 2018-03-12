@@ -53,9 +53,9 @@ struct test_basics : roundtrip_test_base<T>
             // letters and digits representing an integer with the radix
             // specified by base (C11 7.22.1.4/3)
             r = from_chars(s, s + sizeof(s), x);
-            LIBCPP_ASSERT(r.ec == std::errc{});
-            LIBCPP_ASSERT(r.ptr == s + 3);
-            LIBCPP_ASSERT(x == 1);
+            assert(r.ec == std::errc{});
+            assert(r.ptr == s + 3);
+            assert(x == 1);
         }
 
         {
@@ -64,17 +64,17 @@ struct test_basics : roundtrip_test_base<T>
             // The letters from a (or A) through z (or Z) are ascribed the
             // values 10 through 35; (C11 7.22.1.4/3)
             r = from_chars(s, s + sizeof(s), x, 36);
-            LIBCPP_ASSERT(r.ec == std::errc::result_out_of_range);
+            assert(r.ec == std::errc::result_out_of_range);
             // The member ptr of the return value points to the first character
             // not matching the pattern
-            LIBCPP_ASSERT(r.ptr == s + sizeof(s) - 2);
-            LIBCPP_ASSERT(x == 1);
+            assert(r.ptr == s + sizeof(s) - 2);
+            assert(x == 1);
 
             // no "0x" or "0X" prefix shall appear if the value of base is 16
             r = from_chars(s, s + sizeof(s), x, 16);
-            LIBCPP_ASSERT(r.ec == std::errc{});
-            LIBCPP_ASSERT(r.ptr == s + 1);
-            LIBCPP_ASSERT(x == 0);
+            assert(r.ec == std::errc{});
+            assert(r.ptr == s + 1);
+            assert(x == 0);
 
             // only letters and digits whose ascribed values are less than that
             // of base are permitted. (C11 7.22.1.4/3)
@@ -84,19 +84,19 @@ struct test_basics : roundtrip_test_base<T>
             if (!fits_in<T>(1150))
             {
                 // value is unmodified and
-                LIBCPP_ASSERT(x == 0);
+                assert(x == 0);
                 // the member ec of the return value is equal to
                 // errc::result_out_of_range
-                LIBCPP_ASSERT(r.ec == std::errc::result_out_of_range);
+                assert(r.ec == std::errc::result_out_of_range);
             }
             else
             {
                 // Otherwise, value is set to the parsed value,
-                LIBCPP_ASSERT(x == 1150);
+                assert(x == 1150);
                 // and the member ec is value-initialized.
-                LIBCPP_ASSERT(r.ec == std::errc{});
+                assert(r.ec == std::errc{});
             }
-            LIBCPP_ASSERT(r.ptr == s + 5);
+            assert(r.ptr == s + 5);
         }
     }
 };
@@ -135,31 +135,31 @@ struct test_signed : roundtrip_test_base<T>
             // but the string has no digit characters following the sign,
             r = from_chars(s + 1, s + sizeof(s), x);
             // no characters match the pattern.
-            LIBCPP_ASSERT(r.ptr == s + 1);
-            LIBCPP_ASSERT(r.ec == std::errc::invalid_argument);
+            assert(r.ptr == s + 1);
+            assert(r.ec == std::errc::invalid_argument);
 
             // a minus sign is the only sign that may appear
             r = from_chars(s + 3, s + sizeof(s), x);
-            LIBCPP_ASSERT(r.ec == std::errc{});
+            assert(r.ec == std::errc{});
             // The member ptr of the return value points to the first character
             // not matching the pattern,
-            LIBCPP_ASSERT(r.ptr == s + 4);
-            LIBCPP_ASSERT(x == 9);
+            assert(r.ptr == s + 4);
+            assert(x == 9);
 
             r = from_chars(s + 5, s + 7, x);
-            LIBCPP_ASSERT(r.ec == std::errc{});
+            assert(r.ec == std::errc{});
             // or has the value last if all characters match.
-            LIBCPP_ASSERT(r.ptr == s + 7);
-            LIBCPP_ASSERT(x == 12);
+            assert(r.ptr == s + 7);
+            assert(x == 12);
 
             // If no characters match the pattern,
             r = from_chars(s + 4, s + sizeof(s), x);
             // value is unmodified,
-            LIBCPP_ASSERT(x == 12);
+            assert(x == 12);
             // the member ptr of the return value is first and
-            LIBCPP_ASSERT(r.ptr == s + 4);
+            assert(r.ptr == s + 4);
             // the member ec is equal to errc::invalid_argument.
-            LIBCPP_ASSERT(r.ec == std::errc::invalid_argument);
+            assert(r.ec == std::errc::invalid_argument);
         }
     }
 };
