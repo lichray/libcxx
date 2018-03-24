@@ -1098,11 +1098,36 @@ struct __overload<> { void operator()() const; };
 template <class _Tp, class... _Types>
 struct __overload<_Tp, _Types...> : __overload<_Types...> {
   using __overload<_Types...>::operator();
-  __identity<_Tp> operator()(_Tp) const;
+
+  template <class _Up>
+  auto operator()(_Tp, _Up&& __t) const
+      -> decltype(_Tp{__t}, __identity<_Tp>());
 };
 
+#define _LIBCPP_VARIANT_BOOLEAN_CONVERSION(bool_type)                \
+  template <class... _Types>                                         \
+  struct __overload<bool_type, _Types...> : __overload<_Types...> {  \
+    using __overload<_Types...>::operator();                         \
+                                                                     \
+    template <class _Up, class _Ap = __uncvref_t<_Up>>               \
+    auto operator()(bool, _Up&&, int _Ap::* = 0) const               \
+        -> __identity<bool_type>;                                    \
+                                                                     \
+    template <class _Up, class _Ap = __uncvref_t<_Up>>               \
+    auto operator()(bool, _Up&&) const                               \
+        -> enable_if_t<is_same_v<_Ap, bool>, __identity<bool_type>>; \
+  }
+
+_LIBCPP_VARIANT_BOOLEAN_CONVERSION(bool);
+_LIBCPP_VARIANT_BOOLEAN_CONVERSION(bool const);
+_LIBCPP_VARIANT_BOOLEAN_CONVERSION(bool volatile);
+_LIBCPP_VARIANT_BOOLEAN_CONVERSION(bool const volatile);
+
+#undef _LIBCPP_VARIANT_BOOLEAN_CONVERSION
+
 template <class _Tp, class... _Types>
-using __best_match_t = typename result_of_t<__overload<_Types...>(_Tp&&)>::type;
+using __best_match_t =
+    typename invoke_result_t<__overload<_Types...>, _Tp, _Tp>::type;
 
 } // __variant_detail
 
