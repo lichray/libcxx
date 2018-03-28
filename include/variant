@@ -1104,26 +1104,30 @@ struct __overload<_Tp, _Types...> : __overload<_Types...> {
       -> decltype(_Tp{__t}, __identity<_Tp>());
 };
 
-#define _LIBCPP_VARIANT_BOOLEAN_CONVERSION(bool_type)                \
-  template <class... _Types>                                         \
-  struct __overload<bool_type, _Types...> : __overload<_Types...> {  \
-    using __overload<_Types...>::operator();                         \
-                                                                     \
-    template <class _Up, class _Ap = __uncvref_t<_Up>>               \
-    auto operator()(bool, _Up&&, int _Ap::* = 0) const               \
-        -> __identity<bool_type>;                                    \
-                                                                     \
-    template <class _Up, class _Ap = __uncvref_t<_Up>>               \
-    auto operator()(bool, _Up&&) const                               \
-        -> enable_if_t<is_same_v<_Ap, bool>, __identity<bool_type>>; \
-  }
+template <class _Base, class _Tp>
+struct __overload_bool : _Base {
+  using _Base::operator();
 
-_LIBCPP_VARIANT_BOOLEAN_CONVERSION(bool);
-_LIBCPP_VARIANT_BOOLEAN_CONVERSION(bool const);
-_LIBCPP_VARIANT_BOOLEAN_CONVERSION(bool volatile);
-_LIBCPP_VARIANT_BOOLEAN_CONVERSION(bool const volatile);
+  template <class _Up, class _Ap = __uncvref_t<_Up>>
+  auto operator()(bool, _Up&&, int _Ap::* = 0) const -> __identity<_Tp>;
 
-#undef _LIBCPP_VARIANT_BOOLEAN_CONVERSION
+  template <class _Up, class _Ap = __uncvref_t<_Up>>
+  auto operator()(bool, _Up&&) const
+      -> enable_if_t<is_same_v<_Ap, bool>, __identity<_Tp>>;
+};
+
+template <class... _Types>
+struct __overload<bool, _Types...>
+    : __overload_bool<__overload<_Types...>, bool> {};
+template <class... _Types>
+struct __overload<bool const, _Types...>
+    : __overload_bool<__overload<_Types...>, bool const> {};
+template <class... _Types>
+struct __overload<bool volatile, _Types...>
+    : __overload_bool<__overload<_Types...>, bool volatile> {};
+template <class... _Types>
+struct __overload<bool const volatile, _Types...>
+    : __overload_bool<__overload<_Types...>, bool const volatile> {};
 
 template <class _Tp, class... _Types>
 using __best_match_t =
