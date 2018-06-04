@@ -1101,7 +1101,7 @@ struct __overload<_Tp, _Types...> : __overload<_Types...> {
 
   template <class _Up>
   auto operator()(_Tp, _Up&& __t) const
-      -> decltype(_Tp{__t}, __identity<_Tp>());
+      -> decltype(_Tp{_VSTD::forward<_Up>(__t)}, __identity<_Tp>());
 };
 
 template <class _Base, class _Tp>

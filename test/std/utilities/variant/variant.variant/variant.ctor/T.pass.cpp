@@ -40,6 +40,8 @@ struct NoThrowT {
 
 struct AnyConstructible { template <typename T> AnyConstructible(T&&) {} };
 struct NoConstructible { NoConstructible() = delete; };
+template <class T>
+struct RValueConvertibleFrom { RValueConvertibleFrom(T&&) {} };
 
 void test_T_ctor_noexcept() {
   {
@@ -129,6 +131,14 @@ void test_T_ctor_basic() {
     std::variant<bool volatile const, int> v = true;
     assert(v.index() == 0);
     assert(std::get<0>(v));
+  }
+  {
+    std::variant<RValueConvertibleFrom<int>> v1 = 42;
+    assert(v1.index() == 0);
+
+    int x = 42;
+    std::variant<RValueConvertibleFrom<int>, AnyConstructible> v2 = x;
+    assert(v2.index() == 1);
   }
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   {
