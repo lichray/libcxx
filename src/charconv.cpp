@@ -31,32 +31,35 @@ static constexpr char cDigitsLut[200] = {
     '9', '0', '9', '1', '9', '2', '9', '3', '9', '4', '9', '5', '9', '6', '9',
     '7', '9', '8', '9', '9'};
 
-#define APPEND1(i)                              \
-    do                                          \
-    {                                           \
-        *buffer++ = '0' + static_cast<char>(i); \
-    } while (0)
+template <typename T>
+inline _LIBCPP_INLINE_VISIBILITY char*
+append1(char* buffer, T i)
+{
+    *buffer = '0' + static_cast<char>(i);
+    return buffer + 1;
+}
 
-#define APPEND2(i)                             \
-    do                                         \
-    {                                          \
-        memcpy(buffer, &cDigitsLut[(i)*2], 2); \
-        buffer += 2;                           \
-    } while (0)
+template <typename T>
+inline _LIBCPP_INLINE_VISIBILITY char*
+append2(char* buffer, T i)
+{
+    memcpy(buffer, &cDigitsLut[(i)*2], 2);
+    return buffer + 2;
+}
 
-#define APPEND3(i)          \
-    do                      \
-    {                       \
-        APPEND1((i) / 100); \
-        APPEND2((i) % 100); \
-    } while (0)
+template <typename T>
+inline _LIBCPP_INLINE_VISIBILITY char*
+append3(char* buffer, T i)
+{
+    return append2(append1(buffer, (i) / 100), (i) % 100);
+}
 
-#define APPEND4(i)          \
-    do                      \
-    {                       \
-        APPEND2((i) / 100); \
-        APPEND2((i) % 100); \
-    } while (0)
+template <typename T>
+inline _LIBCPP_INLINE_VISIBILITY char*
+append4(char* buffer, T i)
+{
+    return append2(append2(buffer, (i) / 100), (i) % 100);
+}
 
 char*
 __u32toa(uint32_t value, char* buffer)
@@ -66,16 +69,16 @@ __u32toa(uint32_t value, char* buffer)
         if (value < 100)
         {
             if (value < 10)
-                APPEND1(value);
+                buffer = append1(buffer, value);
             else
-                APPEND2(value);
+                buffer = append2(buffer, value);
         }
         else
         {
             if (value < 1000)
-                APPEND3(value);
+                buffer = append3(buffer, value);
             else
-                APPEND4(value);
+                buffer = append4(buffer, value);
         }
     }
     else if (value < 100000000)
@@ -87,19 +90,19 @@ __u32toa(uint32_t value, char* buffer)
         if (value < 1000000)
         {
             if (value < 100000)
-                APPEND1(b);
+                buffer = append1(buffer, b);
             else
-                APPEND2(b);
+                buffer = append2(buffer, b);
         }
         else
         {
             if (value < 10000000)
-                APPEND3(b);
+                buffer = append3(buffer, b);
             else
-                APPEND4(b);
+                buffer = append4(buffer, b);
         }
 
-        APPEND4(c);
+        buffer = append4(buffer, c);
     }
     else
     {
@@ -108,12 +111,12 @@ __u32toa(uint32_t value, char* buffer)
         value %= 100000000;
 
         if (a < 10)
-            APPEND1(a);
+            buffer = append1(buffer, a);
         else
-            APPEND2(a);
+            buffer = append2(buffer, a);
 
-        APPEND4(value / 10000);
-        APPEND4(value % 10000);
+        buffer = append4(buffer, value / 10000);
+        buffer = append4(buffer, value % 10000);
     }
 
     return buffer;
@@ -130,16 +133,16 @@ __u64toa(uint64_t value, char* buffer)
             if (v < 100)
             {
                 if (v < 10)
-                    APPEND1(v);
+                    buffer = append1(buffer, v);
                 else
-                    APPEND2(v);
+                    buffer = append2(buffer, v);
             }
             else
             {
                 if (v < 1000)
-                    APPEND3(v);
+                    buffer = append3(buffer, v);
                 else
-                    APPEND4(v);
+                    buffer = append4(buffer, v);
             }
         }
         else
@@ -151,19 +154,19 @@ __u64toa(uint64_t value, char* buffer)
             if (v < 1000000)
             {
                 if (v < 100000)
-                    APPEND1(b);
+                    buffer = append1(buffer, b);
                 else
-                    APPEND2(b);
+                    buffer = append2(buffer, b);
             }
             else
             {
                 if (v < 10000000)
-                    APPEND3(b);
+                    buffer = append3(buffer, b);
                 else
-                    APPEND4(b);
+                    buffer = append4(buffer, b);
             }
 
-            APPEND4(c);
+            buffer = append4(buffer, c);
         }
     }
     else if (value < 10000000000000000)
@@ -177,21 +180,21 @@ __u64toa(uint64_t value, char* buffer)
         if (v0 < 1000000)
         {
             if (v0 < 100000)
-                APPEND1(b0);
+                buffer = append1(buffer, b0);
             else
-                APPEND2(b0);
+                buffer = append2(buffer, b0);
         }
         else
         {
             if (v0 < 10000000)
-                APPEND3(b0);
+                buffer = append3(buffer, b0);
             else
-                APPEND4(b0);
+                buffer = append4(buffer, b0);
         }
 
-        APPEND4(c0);
-        APPEND4(v1 / 10000);
-        APPEND4(v1 % 10000);
+        buffer = append4(buffer, c0);
+        buffer = append4(buffer, v1 / 10000);
+        buffer = append4(buffer, v1 % 10000);
     }
     else
     {
@@ -202,24 +205,24 @@ __u64toa(uint64_t value, char* buffer)
         if (a < 100)
         {
             if (a < 10)
-                APPEND1(a);
+                buffer = append1(buffer, a);
             else
-                APPEND2(a);
+                buffer = append2(buffer, a);
         }
         else
         {
             if (a < 1000)
-                APPEND3(a);
+                buffer = append3(buffer, a);
             else
-                APPEND4(a);
+                buffer = append4(buffer, a);
         }
 
         const uint32_t v0 = static_cast<uint32_t>(value / 100000000);
         const uint32_t v1 = static_cast<uint32_t>(value % 100000000);
-        APPEND4(v0 / 10000);
-        APPEND4(v0 % 10000);
-        APPEND4(v1 / 10000);
-        APPEND4(v1 % 10000);
+        buffer = append4(buffer, v0 / 10000);
+        buffer = append4(buffer, v0 % 10000);
+        buffer = append4(buffer, v1 / 10000);
+        buffer = append4(buffer, v1 % 10000);
     }
 
     return buffer;
