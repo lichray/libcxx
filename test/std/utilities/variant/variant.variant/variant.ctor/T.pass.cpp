@@ -22,7 +22,6 @@
 #include <variant>
 #include <memory>
 
-#include "test_convertible.hpp"
 #include "test_macros.h"
 #include "variant_test_helpers.hpp"
 
@@ -77,6 +76,22 @@ void test_T_ctor_sfinae() {
     using V = std::variant<std::unique_ptr<int>, bool>;
     static_assert(!std::is_constructible<V, std::unique_ptr<char>>::value,
                   "no explicit bool in constructor");
+    struct X {
+      operator void*();
+    };
+    static_assert(!std::is_constructible<V, X>::value,
+                  "no boolean conversion in constructor");
+    static_assert(!std::is_constructible<V, std::false_type>::value,
+                  "no converted to bool in constructor");
+  }
+  {
+    struct X {};
+    struct Y {
+      operator X();
+    };
+    using V = std::variant<X>;
+    static_assert(std::is_constructible<V, Y>::value,
+                  "regression on user-defined conversions in constructor");
   }
   {
     using V = std::variant<AnyConstructible, NoConstructible>;

@@ -148,6 +148,22 @@ void test_T_assignment_sfinae() {
     using V = std::variant<std::unique_ptr<int>, bool>;
     static_assert(!std::is_assignable<V, std::unique_ptr<char>>::value,
                   "no explicit bool in operator=");
+    struct X {
+      operator void*();
+    };
+    static_assert(!std::is_assignable<V, X>::value,
+                  "no boolean conversion in operator=");
+    static_assert(!std::is_assignable<V, std::false_type>::value,
+                  "no converted to bool in operator=");
+  }
+  {
+    struct X {};
+    struct Y {
+      operator X();
+    };
+    using V = std::variant<X>;
+    static_assert(std::is_assignable<V, Y>::value,
+                  "regression on user-defined conversions in operator=");
   }
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   {
@@ -188,9 +204,6 @@ void test_T_assignment_basic() {
   }
   {
     std::variant<std::string, bool> v = true;
-    v = std::false_type();
-    assert(v.index() == 1);
-    assert(std::get<1>(v) == false);
     v = "bar";
     assert(v.index() == 0);
     assert(std::get<0>(v) == "bar");
@@ -200,18 +213,14 @@ void test_T_assignment_basic() {
     v = nullptr;
     assert(v.index() == 1);
     assert(std::get<1>(v) == nullptr);
-    v = std::true_type();
-    assert(v.index() == 0);
-    assert(std::get<0>(v));
   }
   {
     std::variant<bool volatile, int> v = 42;
-    assert(v.index() == 1);
-    assert(std::get<1>(v) == 42);
-    v = std::false_type();
+    v = false;
     assert(v.index() == 0);
     assert(!std::get<0>(v));
-    v = true;
+    bool lvt = true;
+    v = lvt;
     assert(v.index() == 0);
     assert(std::get<0>(v));
   }
