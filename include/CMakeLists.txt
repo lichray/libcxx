@@ -31,6 +31,7 @@ set(files
   cerrno
   cfenv
   cfloat
+  charconv
   chrono
   cinttypes
   ciso646
