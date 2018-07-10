@@ -18,6 +18,10 @@
 
 #include "test_macros.h"
 
+#if TEST_STD_VER <= 11
+#error This file requires C++14
+#endif
+
 using std::false_type;
 using std::true_type;
 
@@ -53,14 +57,14 @@ template <typename X, typename T, typename xl = std::numeric_limits<X>>
 constexpr bool
 _fits_in(T v, false_type, true_type /* T signed */, false_type /* X unsigned*/)
 {
-    return 0 <= v && typename std::make_unsigned<T>::type(v) <= (xl::max)();
+    return 0 <= v && std::make_unsigned_t<T>(v) <= (xl::max)();
 }
 
 template <typename X, typename T, typename xl = std::numeric_limits<X>>
 constexpr bool
 _fits_in(T v, false_type, false_type /* T unsigned */, ...)
 {
-    return v <= typename std::make_unsigned<X>::type((xl::max)());
+    return v <= std::make_unsigned_t<X>((xl::max)());
 }
 
 template <typename X, typename T>
@@ -116,11 +120,7 @@ struct to_chars_test_base
     }
 
 private:
-    using max_t = typename std::conditional<std::is_signed<X>::value, long long,
-                                            unsigned long long>::type;
-
     static auto fromchars(char const* p, char const* ep, int base, true_type)
-        -> long long
     {
         char* last;
         auto r = strtoll(p, &last, base);
@@ -130,7 +130,6 @@ private:
     }
 
     static auto fromchars(char const* p, char const* ep, int base, false_type)
-        -> unsigned long long
     {
         char* last;
         auto r = strtoull(p, &last, base);
@@ -139,7 +138,7 @@ private:
         return r;
     }
 
-    static auto fromchars(char const* p, char const* ep, int base = 10) -> max_t
+    static auto fromchars(char const* p, char const* ep, int base = 10)
     {
         return fromchars(p, ep, base, std::is_signed<X>());
     }

@@ -89,6 +89,8 @@ namespace std {
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER > 11
+
 enum class _LIBCPP_ENUM_VIS chars_format
 {
     scientific = 0x1,
@@ -166,10 +168,7 @@ struct _LIBCPP_HIDDEN __traits_base
         return __u64toa(__v, __p);
     }
 
-    static _LIBCPP_INLINE_VISIBILITY auto pow() -> type const (&)[20]
-    {
-        return __pow10_64;
-    }
+    static _LIBCPP_INLINE_VISIBILITY auto& pow() { return __pow10_64; }
 };
 
 template <typename _Tp>
@@ -191,10 +190,7 @@ struct _LIBCPP_HIDDEN
         return __u32toa(__v, __p);
     }
 
-    static _LIBCPP_INLINE_VISIBILITY auto pow() -> type const (&)[10]
-    {
-        return __pow10_32;
-    }
+    static _LIBCPP_INLINE_VISIBILITY auto& pow() { return __pow10_32; }
 };
 
 template <typename _Tp>
@@ -285,10 +281,10 @@ __complement(_Tp __x)
 }
 
 template <typename _Tp>
-inline _LIBCPP_INLINE_VISIBILITY typename make_unsigned<_Tp>::type
+inline _LIBCPP_INLINE_VISIBILITY auto
 __to_unsigned(_Tp __x)
 {
-    return static_cast<typename make_unsigned<_Tp>::type>(__x);
+    return static_cast<make_unsigned_t<_Tp>>(__x);
 }
 
 template <typename _Tp>
@@ -383,16 +379,14 @@ __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
     }
 }
 
-template <typename _Tp,
-          typename enable_if<is_integral<_Tp>::value, int>::type = 0>
+template <typename _Tp, enable_if_t<is_integral<_Tp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY to_chars_result
 to_chars(char* __first, char* __last, _Tp __value)
 {
     return __to_chars_itoa(__first, __last, __value, is_signed<_Tp>());
 }
 
-template <typename _Tp,
-          typename enable_if<is_integral<_Tp>::value, int>::type = 0>
+template <typename _Tp, enable_if_t<is_integral<_Tp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY to_chars_result
 to_chars(char* __first, char* __last, _Tp __value, int __base)
 {
@@ -475,7 +469,7 @@ inline _LIBCPP_INLINE_VISIBILITY from_chars_result
 __subject_seq_combinator(_It __first, _It __last, _Tp& __value, _Fn __f,
                          _Ts... __args)
 {
-    auto __find_non_zero = [](_It __first, _It __last) -> _It {
+    auto __find_non_zero = [](_It __first, _It __last) {
         for (; __first != __last; ++__first)
             if (*__first != '0')
                 break;
@@ -495,7 +489,6 @@ __subject_seq_combinator(_It __first, _It __last, _Tp& __value, _Fn __f,
     }
 
     auto __r = __f(__p, __last, __value, __args...);
-    // ...you just can't let them approve anything that wasn't implemented
     if (__r.ec == errc::result_out_of_range)
     {
         for (; __r.ptr != __last; ++__r.ptr)
@@ -508,8 +501,7 @@ __subject_seq_combinator(_It __first, _It __last, _Tp& __value, _Fn __f,
     return __r;
 }
 
-template <typename _Tp,
-          typename enable_if<is_unsigned<_Tp>::value, int>::type = 0>
+template <typename _Tp, enable_if_t<is_unsigned<_Tp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY from_chars_result
 __from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
 {
@@ -535,8 +527,7 @@ __from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
         });
 }
 
-template <typename _Tp,
-          typename enable_if<is_signed<_Tp>::value, int>::type = 0>
+template <typename _Tp, enable_if_t<is_signed<_Tp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY from_chars_result
 __from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
 {
@@ -544,8 +535,7 @@ __from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
     return __sign_combinator(__first, __last, __value, __from_chars_atoi<__t>);
 }
 
-template <typename _Tp,
-          typename enable_if<is_unsigned<_Tp>::value, int>::type = 0>
+template <typename _Tp, enable_if_t<is_unsigned<_Tp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY from_chars_result
 __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
                       int __base)
@@ -592,8 +582,7 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
         __base);
 }
 
-template <typename _Tp,
-          typename enable_if<is_signed<_Tp>::value, int>::type = 0>
+template <typename _Tp, enable_if_t<is_signed<_Tp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY from_chars_result
 __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
                       int __base)
@@ -603,22 +592,22 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
                              __from_chars_integral<__t>, __base);
 }
 
-template <typename _Tp,
-          typename enable_if<is_integral<_Tp>::value, int>::type = 0>
+template <typename _Tp, enable_if_t<is_integral<_Tp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value)
 {
     return __from_chars_atoi(__first, __last, __value);
 }
 
-template <typename _Tp,
-          typename enable_if<is_integral<_Tp>::value, int>::type = 0>
+template <typename _Tp, enable_if_t<is_integral<_Tp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value, int __base)
 {
     _LIBCPP_ASSERT(2 <= __base && __base <= 36, "base not in [2, 36]");
     return __from_chars_integral(__first, __last, __value, __base);
 }
+
+#endif  // _LIBCPP_STD_VER > 11
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++98, c++03, c++11
 // <charconv>
 
 // from_chars_result from_chars(const char* first, const char* last,

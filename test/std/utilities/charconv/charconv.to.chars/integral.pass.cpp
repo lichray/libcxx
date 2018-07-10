@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++98, c++03, c++11
 // <charconv>
 
 // to_chars_result to_chars(char* first, char* last, Integral value,
