@@ -131,33 +131,42 @@ struct test_signed : roundtrip_test_base<T>
 
         {
             // If the pattern allows for an optional sign,
-            char s[] = " - 9+12";
             // but the string has no digit characters following the sign,
-            r = from_chars(s + 1, s + sizeof(s), x);
+            char s[] = "- 9+12";
+            r = from_chars(s, s + sizeof(s), x);
             // no characters match the pattern.
-            assert(r.ptr == s + 1);
+            assert(r.ptr == s);
             assert(r.ec == std::errc::invalid_argument);
+        }
 
-            // a minus sign is the only sign that may appear
-            r = from_chars(s + 3, s + sizeof(s), x);
+        {
+            char s[] = "9+12";
+            r = from_chars(s, s + sizeof(s), x);
             assert(r.ec == std::errc{});
             // The member ptr of the return value points to the first character
             // not matching the pattern,
-            assert(r.ptr == s + 4);
+            assert(r.ptr == s + 1);
             assert(x == 9);
+        }
 
-            r = from_chars(s + 5, s + 7, x);
+        {
+            char s[] = "12";
+            r = from_chars(s, s + 2, x);
             assert(r.ec == std::errc{});
             // or has the value last if all characters match.
-            assert(r.ptr == s + 7);
+            assert(r.ptr == s + 2);
             assert(x == 12);
+        }
 
+        {
+            // '-' is the only sign that may appear
+            char s[] = "+30";
             // If no characters match the pattern,
-            r = from_chars(s + 4, s + sizeof(s), x);
+            r = from_chars(s, s + sizeof(s), x);
             // value is unmodified,
             assert(x == 12);
             // the member ptr of the return value is first and
-            assert(r.ptr == s + 4);
+            assert(r.ptr == s);
             // the member ec is equal to errc::invalid_argument.
             assert(r.ec == std::errc::invalid_argument);
         }
