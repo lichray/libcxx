@@ -156,19 +156,19 @@ struct _LIBCPP_HIDDEN __traits_base
     using type = uint64_t;
 
 #if !defined(_LIBCPP_COMPILER_MSVC)
-    static _LIBCPP_INLINE_VISIBILITY int width(_Tp __v)
+    static _LIBCPP_INLINE_VISIBILITY int __width(_Tp __v)
     {
         auto __t = (64 - __builtin_clzll(__v | 1)) * 1233 >> 12;
         return __t - (__v < __pow10_64[__t]) + 1;
     }
 #endif
 
-    static _LIBCPP_INLINE_VISIBILITY char* convert(_Tp __v, char* __p)
+    static _LIBCPP_INLINE_VISIBILITY char* __convert(_Tp __v, char* __p)
     {
         return __u64toa(__v, __p);
     }
 
-    static _LIBCPP_INLINE_VISIBILITY auto& pow() { return __pow10_64; }
+    static _LIBCPP_INLINE_VISIBILITY auto& __pow() { return __pow10_64; }
 };
 
 template <typename _Tp>
@@ -178,19 +178,19 @@ struct _LIBCPP_HIDDEN
     using type = uint32_t;
 
 #if !defined(_LIBCPP_COMPILER_MSVC)
-    static _LIBCPP_INLINE_VISIBILITY int width(_Tp __v)
+    static _LIBCPP_INLINE_VISIBILITY int __width(_Tp __v)
     {
         auto __t = (32 - __builtin_clz(__v | 1)) * 1233 >> 12;
         return __t - (__v < __pow10_32[__t]) + 1;
     }
 #endif
 
-    static _LIBCPP_INLINE_VISIBILITY char* convert(_Tp __v, char* __p)
+    static _LIBCPP_INLINE_VISIBILITY char* __convert(_Tp __v, char* __p)
     {
         return __u32toa(__v, __p);
     }
 
-    static _LIBCPP_INLINE_VISIBILITY auto& pow() { return __pow10_32; }
+    static _LIBCPP_INLINE_VISIBILITY auto& __pow() { return __pow10_32; }
 };
 
 template <typename _Tp>
@@ -236,12 +236,12 @@ template <typename _Tp>
 struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp>
 {
     static constexpr int digits = numeric_limits<_Tp>::digits10 + 1;
-    using __traits_base<_Tp>::pow;
+    using __traits_base<_Tp>::__pow;
     using typename __traits_base<_Tp>::type;
 
     // precondition: at least one non-zero character available
     static _LIBCPP_INLINE_VISIBILITY char const*
-    read(char const* __p, char const* __ep, type& __a, type& __b)
+    __read(char const* __p, char const* __ep, type& __a, type& __b)
     {
         type __cprod[digits];
         int __j = digits - 1;
@@ -253,16 +253,16 @@ struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp>
             __cprod[--__i] = *__p++ - '0';
         } while (__p != __ep && __i != 0);
 
-        __a = inner_product(__cprod + __i + 1, __cprod + __j, pow() + 1,
-                            __cprod[__i]);
-        if (__mul_overflowed(__cprod[__j], pow()[__j - __i], __b))
+        __a = __inner_product(__cprod + __i + 1, __cprod + __j, __pow() + 1,
+                              __cprod[__i]);
+        if (__mul_overflowed(__cprod[__j], __pow()[__j - __i], __b))
             --__p;
         return __p;
     }
 
     template <typename _It1, typename _It2, class _Up>
     static _LIBCPP_INLINE_VISIBILITY _Up
-    inner_product(_It1 __first1, _It1 __last1, _It2 __first2, _Up __init)
+    __inner_product(_It1 __first1, _It1 __last1, _It2 __first2, _Up __init)
     {
         for (; __first1 < __last1; ++__first1, ++__first2)
             __init = __init + *__first1 * *__first2;
@@ -309,17 +309,17 @@ __to_chars_itoa(char* __first, char* __last, _Tp __value, false_type)
     auto __diff = __last - __first;
 
 #if !defined(_LIBCPP_COMPILER_MSVC)
-    if (__tx::digits <= __diff || __tx::width(__value) <= __diff)
-        return {__tx::convert(__value, __first), {}};
+    if (__tx::digits <= __diff || __tx::__width(__value) <= __diff)
+        return {__tx::__convert(__value, __first), {}};
     else
         return {__last, errc::value_too_large};
 #else
     if (__tx::digits <= __diff)
-        return {__tx::convert(__value, __first), {}};
+        return {__tx::__convert(__value, __first), {}};
     else
     {
         char __buf[__tx::digits];
-        auto __p = __tx::convert(__value, __buf);
+        auto __p = __tx::__convert(__value, __buf);
         auto __len = __p - __buf;
         if (__len <= __diff)
         {
@@ -513,7 +513,7 @@ __from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
         [](const char* __first, const char* __last,
            _Tp& __value) -> from_chars_result {
             __output_type __a, __b;
-            auto __p = __tx::read(__first, __last, __a, __b);
+            auto __p = __tx::__read(__first, __last, __a, __b);
             if (__p == __last || !__in_pattern(*__p))
             {
                 __output_type __m = (numeric_limits<_Tp>::max)();
