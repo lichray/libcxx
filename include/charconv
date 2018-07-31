@@ -355,16 +355,12 @@ __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
     if (__base == 10)
         return __to_chars_itoa(__first, __last, __value, false_type());
 
-    auto __gen_digit = [](_Tp __c) {
-        return "0123456789abcdefghijklmnopqrstuvwxyz"[__c];
-    };
-
     auto __p = __last;
     while (__p != __first)
     {
         auto __c = __value % __base;
         __value /= __base;
-        *--__p = __gen_digit(__c);
+        *--__p = "0123456789abcdefghijklmnopqrstuvwxyz"[__c];
         if (__value == 0)
             break;
     }
